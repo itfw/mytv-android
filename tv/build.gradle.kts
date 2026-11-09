@@ -16,18 +16,21 @@ android {
     apply(extra["appConfig"] as BaseAppModuleExtension.() -> Unit)
 
     signingConfigs {
-        create("release") {
-            val keystorePropertiesFile = rootProject.file("signing.properties")
-            if (keystorePropertiesFile.exists()) {
-                val keystoreProperties = Properties()
-                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
-                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile", "keystore.jks"))
-                storePassword = keystoreProperties.getProperty("storePassword")
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
-            }
+    getByName("release") {
+        val keystorePropertiesFile = rootProject.file("signing.properties")
+        if (keystorePropertiesFile.exists()) {
+            val keystoreProperties = Properties()
+            keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+            storeFile = rootProject.file(keystoreProperties.getProperty("storeFile", "keystore.jks"))
+            storePassword = keystoreProperties.getProperty("storePassword")
+            keyAlias = keystoreProperties.getProperty("keyAlias")
+            keyPassword = keystoreProperties.getProperty("keyPassword")
+            println("DEBUG signing: storeFile=${storeFile?.absolutePath}, alias=$keyAlias, storePassword=${storePassword?.length} chars")
+        } else {
+            println("DEBUG signing: signing.properties NOT FOUND at ${keystorePropertiesFile.absolutePath}")
         }
     }
+}
 
 
     namespace = "top.yogiczy.mytv.tv"
