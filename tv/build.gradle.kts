@@ -15,6 +15,21 @@ android {
     @Suppress("UNCHECKED_CAST")
     apply(extra["appConfig"] as BaseAppModuleExtension.() -> Unit)
 
+    signingConfigs {
+        create("release") {
+            val keystorePropertiesFile = rootProject.file("signing.properties")
+            if (keystorePropertiesFile.exists()) {
+                val keystoreProperties = Properties()
+                keystoreProperties.load(FileInputStream(keystorePropertiesFile))
+                storeFile = rootProject.file(keystoreProperties.getProperty("storeFile", "keystore.jks"))
+                storePassword = keystoreProperties.getProperty("storePassword")
+                keyAlias = keystoreProperties.getProperty("keyAlias")
+                keyPassword = keystoreProperties.getProperty("keyPassword")
+            }
+        }
+    }
+
+
     namespace = "top.yogiczy.mytv.tv"
     compileSdk = libs.versions.compileSdk.get().toInt()
 
