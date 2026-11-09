@@ -54,14 +54,25 @@ jobs:
       run: chmod +x gradlew
 
     - name: Add signing properties
+      env:
+        SIGNING_PROPERTIES: ${{ secrets.SIGNING_PROPERTIES }}
       run: |
-        echo ${{ secrets.SIGNING_PROPERTIES }} > encoded_signing_properties
-        base64 -d -i encoded_signing_properties > signing.properties
+        echo "$SIGNING_PROPERTIES" | base64 -d > signing.properties
+        echo "signing.properties generated:"
+        cat signing.properties
 
     - name: Add jks file
+      env:
+        SIGN_KEY: ${{ secrets.SIGN_KEY }}
       run: |
-        echo ${{ secrets.SIGN_KEY }} > ./encoded_key
-        base64 -d -i encoded_key > keystore.jks
+        echo "$SIGN_KEY" | base64 -d > keystore.jks
+        ls -l keystore.jks
+
+    - name: Verify keystore
+      env:
+        STORE_PASSWORD: ${{ secrets.STORE_PASSWORD }}
+      run: |
+        keytool -list -keystore keystore.jks -storepass "$STORE_PASSWORD" | head -5
 
     - name: Add SHORT_SHA Environment Variable
       id: short-sha
