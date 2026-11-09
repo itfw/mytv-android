@@ -1,15 +1,17 @@
 name: Buildtest
 
 on:
-  push:
-    branches:
-      - main
-      - beta
-      - dev
-  pull_request_target:
-    branches:
-      - dev
   workflow_dispatch:
+    inputs:
+      branch:
+        description: '选择运行的分支 (main/beta/dev)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - main
+          - beta
+          - dev
 
 jobs:
   build:
@@ -19,6 +21,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
+        ref: ${{ inputs.branch }}
         fetch-depth: 0
         submodules: 'true'
 
@@ -33,16 +36,10 @@ jobs:
     - name: Get changelog
       id: changelog
       run: |
-        BEFORE="${{ github.event.before }}"
-        # 手动触发 / 首次 push 时 before 为空，兜底取最近 10 个 commit
-        if [ -z "$BEFORE" ] || [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
-          LOG=$(git log --pretty=format:"- %s (%h)" -10)
-        else
-          LOG=$(git log --pretty=format:"- %s (%h)" "$BEFORE".."${{ github.sha }}")
-        fi
         {
           echo "changelog<<EOF"
-          echo "$LOG"
+          git log --pretty=format:"- %s (%h)" -10
+          echo ""
           echo "EOF"
         } >> "$GITHUB_ENV"
 
@@ -72,13 +69,13 @@ jobs:
       run: echo "short_sha=`git rev-parse --short HEAD`" >> $GITHUB_ENV
 
     - name: Build with Gradle (Release)
-      if: github.ref == 'refs/heads/main'
+      if: inputs.branch == 'main'
       env:
         VERSION_CODE: ${{ github.run_number }}
       run: ./gradlew :tv:assembleRelease
 
     - name: Build with Gradle (Dev)
-      if: (github.ref == 'refs/heads/beta' || github.ref == 'refs/heads/dev')
+      if: inputs.branch == 'beta' || inputs.branch == 'dev'
       env:
         SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
         SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
@@ -86,24 +83,22 @@ jobs:
       run: ./gradlew :tv:assembleDebug --warning-mode=all
 
     - name: Move Metadata (Dev)
-      if: github.event_name == 'push' && (github.ref == 'refs/heads/beta' || github.ref == 'refs/heads/dev')
+      if: inputs.branch == 'beta' || inputs.branch == 'dev'
       run: |
         mv tv/build/outputs/apk/original/debug/output-metadata.json tv/build/outputs/apk/release/output-metadata.json
 
     - name: Move Metadata (Release)
-      if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      if: inputs.branch == 'main'
       run: |
         mv tv/build/outputs/apk/original/release/output-metadata.json tv/build/outputs/apk/release/output-metadata.json
 
     - name: Read apk output metadata
-      if: github.event_name == 'push'
       id: apk-meta-release
       uses: juliangruber/read-file-action@v1
       with:
         path: tv/build/outputs/apk/release/output-metadata.json
 
     - name: Parse apk infos
-      if: github.event_name == 'push'
       run: |
         echo "info_version_code=${{ fromJson(steps.apk-meta-release.outputs.content).elements[0].versionCode }}" >> $GITHUB_ENV
         echo "info_version_name=${{ fromJson(steps.apk-meta-release.outputs.content).elements[0].versionName }}" >> $GITHUB_ENV
@@ -111,7 +106,7 @@ jobs:
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: apk-${{ env.short_sha }}
+        name: apk-${{ inputs.branch }}-${{ env.short_sha }}
         path: |
           tv/build/outputs/apk/release/*.apk
           tv/build/outputs/apk/original/**/*.apk
