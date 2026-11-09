@@ -123,5 +123,4 @@ jobs:
         name: apk-${{ inputs.branch }}-${{ env.short_sha }}
         path: |
           tv/build/outputs/apk/release/*.apk
-          tv/build/outputs/apk/original/**/*.apk
         if-no-files-found: warn
