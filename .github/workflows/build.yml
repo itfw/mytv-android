@@ -9,6 +9,17 @@ on:
   pull_request_target:
     branches:
       - dev
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: '选择运行的分支 (main/beta/dev)'
+        required: true
+        default: 'dev'
+        type: choice
+        options:
+          - main
+          - beta
+          - dev
 
 jobs:
   build:
